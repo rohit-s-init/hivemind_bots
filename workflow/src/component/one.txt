@@ -1,0 +1,247 @@
+import { Background, Panel, ReactFlow } from '@xyflow/react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import Node from '../workflow/Node';
+import Normal from '../workflow/Normal';
+
+
+const panOnDrag = [1, 2];
+const variant = 'dots'
+
+function MainWorkflow({ id, map, edges, logs }) {
+
+
+  function getNode(id) {
+    return map.find((val) => { return val.id == id });
+  }
+  const nodes_layout = useMemo(() => {
+    if (!map) return [];
+    return map.map((val, id) => {
+      return {
+        id: val.id,
+        position: { x: val.x, y: val.y },
+        data: { label: val.name },
+        // style: {
+        //   backgroundColor: "white",
+        //   opacity: (getNode(val.id).status == "inactive") ? 0.5 : 1,
+        //   border: (getNode(val.id).status == "error") ? "3px solid red" : ((getNode(val.id).status == "active") && "3px solid green")
+        // // },
+        style: {
+          width: 240,
+          minHeight: 90,
+
+          background:
+            getNode(val.id).status === "active"
+              ? "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
+              : getNode(val.id).status === "error"
+                ? "linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)"
+                : "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+
+          color:
+            getNode(val.id).status === "active"
+              ? "#f8fafc"
+              : "#0f172a",
+
+          border:
+            getNode(val.id).status === "active"
+              ? "1px solid #22c55e"
+              : getNode(val.id).status === "error"
+                ? "1px solid #ef4444"
+                : "1px solid #cbd5e1",
+
+          borderRadius: "18px",
+
+          padding: "16px 18px",
+
+          fontSize: "14px",
+          fontWeight: 600,
+
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+
+          textAlign: "center",
+
+          lineHeight: 1.4,
+
+          backdropFilter: "blur(10px)",
+
+          boxShadow:
+            getNode(val.id).status === "active"
+              ? `
+          0 0 0 1px rgba(34,197,94,0.2),
+          0 0 20px rgba(34,197,94,0.35),
+          0 10px 30px rgba(0,0,0,0.25)
+        `
+              : getNode(val.id).status === "error"
+                ? `
+          0 0 0 1px rgba(239,68,68,0.25),
+          0 0 18px rgba(239,68,68,0.25),
+          0 10px 25px rgba(0,0,0,0.2)
+        `
+                : `
+          0 1px 2px rgba(15,23,42,0.04),
+          0 8px 24px rgba(15,23,42,0.08)
+        `,
+
+          transition: "all 0.25s ease",
+
+          // transform:
+          //   getNode(val.id).status === "active"
+          //     ? "scale(1.02)"
+          //     : "scale(1)",
+
+          pacity: (getNode(val.id).status == "inactive") ? 0.5 : 1,
+
+          letterSpacing: "0.2px",
+
+          cursor: "pointer",
+
+          userSelect: "none",
+          backgroundColor: "white",
+          opacity: (getNode(val.id).status == "inactive") ? 0.5 : 1,
+          border: (getNode(val.id).status == "error") ? "3px solid red" : ((getNode(val.id).status == "active") && "3px solid green")
+
+        },
+        className: "test",
+        type: "default"
+
+      }
+    });
+  }, [map])
+  const edges_layout = useMemo(() => {
+    if (!edges) {
+      return [];
+    }
+
+    return edges.map((val) => {
+      // console.log("logging nodes");
+      // console.log();
+      // return {
+      //   id: val.from + val.to,
+      //   source: val.from,
+      //   target: val.to,
+      //   animated: (getNode(val.from).status == "active") ? true : false,
+      //   style: {
+      //     stroke:
+      //       getNode(val.from).status === "active"
+      //         ? "#22c55e"
+      //         : "#94a3b8",
+
+      //     strokeWidth: 2.2,
+      //   }
+      // }
+      return {
+        id: val.from + val.to,
+
+        source: val.from,
+        target: val.to,
+
+        type: "smoothstep",
+
+        animated:
+          getNode(val.from).status === "active",
+
+        style: {
+          stroke:
+            getNode(val.from).status === "active"
+              ? "#22c55e"
+              : "#94a3b8",
+
+          strokeWidth:
+            getNode(val.from).status === "active"
+              ? 3
+              : 2,
+        },
+
+        markerEnd: {
+          type: "arrowclosed",
+
+          color:
+            getNode(val.from).status === "active"
+              ? "#22c55e"
+              : "#94a3b8",
+        }
+      }
+    });
+
+  })
+
+  console.log("logs are")
+  console.log(logs);
+
+  return (
+    <div
+      style={{
+        flex: 1,
+      }}
+    >
+      <ReactFlow
+        nodes={[...nodes_layout, {
+          id: "error",
+          position: { x: -200, y: 0 },
+          data: { label: logs ? logs.join("\n") : "" },
+          style: {
+            backgroundColor: "#1e1e1e",       // Dark terminal background (slightly softer than black)
+            color: "#00ff00",                 // Classic terminal green text (or use white)
+            fontFamily: "'Courier New', Courier, monospace", // Monospace font is essential
+            fontSize: "12px",
+            padding: "10px",
+            border: "1px solid #CFD4D9",      // Visible border
+            borderRadius: "6px",              // Rounded corners
+            boxShadow: "0 4px 6px rgba(0,0,0,0.3)", // Drop shadow for depth
+            width: "400px",
+            height: "200px",
+            textAlign: "left",
+            overflow: "auto",                 // Enable scrolling if logs overflow
+            opacity: 1,
+            whiteSpace: "pre-wrap",
+            fontFamily: "'JetBrains Mono', monospace"
+            // Optional: Add a subtle grid or scanline effect if supported by your renderer
+          },
+          className: "test",
+          type: "default"
+        }]}
+        edges={edges_layout}
+        panOnScroll
+        selectionOnDrag
+        panOnDrag={panOnDrag}
+        // fitView
+        style={{
+          background: '#f8fafc',
+        }}
+        nodeTypes={{
+          "active": Node,
+          "normal": Normal
+        }}
+        defaultViewport={{ x: 300, y: 100, zoom: 0.6 }}
+
+      >
+        <Background
+          variant={variant}
+          gap={22}
+          size={1.3}
+          color="#cbd5e1"
+        />
+
+        <Panel position="top-right">
+          <div
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              fontSize: '10px',
+              color: '#475569',
+              boxShadow:
+                '0 4px 12px rgba(0,0,0,0.05)',
+            }}
+          >
+            {/* Active: {tabs.find((t) => t.id === activeTab)?.name} */}
+          </div>
+        </Panel>
+      </ReactFlow>
+    </div>
+  )
+}
+
+export default MainWorkflow

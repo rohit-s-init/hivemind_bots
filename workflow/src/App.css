@@ -1,0 +1,10 @@
+body{
+  font-size: 10px;
+  overflow: hidden;
+}
+#root{
+  overflow: hidden;
+}
+.test{
+  background-color: aqua;
+}
