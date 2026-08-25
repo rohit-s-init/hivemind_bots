@@ -579,7 +579,8 @@ export default function useTabs() {
 
     const createTab = () => {
 
-        const fetched = JSON.parse(JSON.stringify(sampleTab));
+        let fetched = JSON.parse(JSON.stringify(sampleTab));
+        fetched.id = Date.now();
 
         setTabs((prev) => {
             let data = JSON.parse(JSON.stringify(prev));
@@ -591,6 +592,8 @@ export default function useTabs() {
         });
 
         setActiveTab(fetched);
+
+        return fetched.id;
     };
     let startState = useCallback((id, state) => {
         console.log("tabs id is ");
@@ -643,7 +646,52 @@ export default function useTabs() {
 
     useEffect(() => {
         activeTabRef.current = activeTab;
+        console.log("active tab is ");
+        console.log(activeTab);
     }, [activeTab]);
+
+    useEffect(() => {
+        const loadWorkflows = async () => {
+            try {
+                const response = await fetch("/workflows");
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch workflows: ${response.status}`);
+                }
+
+                const workflows = await response.json();
+
+                const loadedTabs = {};
+
+                workflows.forEach((workflow) => {
+                    loadedTabs[workflow.id] = {
+                        ...workflow.tab,
+                        logs: workflow.logs
+                    };
+                });
+
+                console.log("fetched worflows are ");
+                console.log(loadedTabs);
+
+                setTabs((prev)=>{
+                    return {...loadedTabs}
+                });
+
+                // Select the first workflow
+                if (workflows.length > 0) {
+                    setActiveTab({
+                        ...workflows[0].tab,
+                        logs: workflows[0].logs
+                    });
+                }
+
+            } catch (error) {
+                console.error("Error loading workflows:", error);
+            }
+        };
+
+        loadWorkflows();
+    }, []);
 
 
 
@@ -651,7 +699,7 @@ export default function useTabs() {
 
 
     return {
-        tabs, createTab, activeTab, updateActiveTab, startState, completeState, errorState
+        tabsRef, tabs, createTab, activeTab, updateActiveTab, startState, completeState, errorState
     }
 
 }

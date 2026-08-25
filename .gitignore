@@ -32,3 +32,5 @@ Thumbs.db
 .npm/
 .pnpm-store/
 .yarn/
+
+*.pem

@@ -7,7 +7,7 @@ function useSocket(startStep, completeStep, errorState) {
 
 
     const socket = useMemo(() => {
-        return io("http://localhost:8080");
+        return io();
     }, []);
 
     const [state, updateState] = useState(false);

@@ -4,6 +4,9 @@ import { createServer } from "http";
 import cors from "cors";
 import newsToPosts from "./util/gemini_posts.js";
 import addPosts2 from "./util/db_post2.js";
+import getAllWorkflows, { uploadWorkflow } from "./util/db_workflow.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 
 
@@ -18,6 +21,7 @@ const io = new Server(httpServer, {
 
 app.use(cors());
 // app.use(cors)
+app.use(express.static("public"));
 
 
 
@@ -360,7 +364,14 @@ async function leftTree(id, news) {
     })
 
     console.log(aiPostPayload);
-    const posts = await newsToPosts(JSON.stringify(aiPostPayload));
+    let posts;
+    try {
+        posts = await newsToPosts(JSON.stringify(aiPostPayload));
+        // posts = temp_gemini_data;
+    } catch (error) {
+        errorStep(id, "content-generation", false, posts)
+        return;
+    }
     // for testing purpose
     // const posts = [
     //     {
@@ -487,7 +498,11 @@ async function leftTree(id, news) {
 
     await startStep(id, "social-complete");
 
-    
+    setTimeout(async () => {
+        await completeStep(id, "social-complete", true, resDb);
+    }, 1000);
+
+
 }
 async function rightTree(id) {
     await startStep(id, "important-news-feed")
@@ -495,15 +510,15 @@ async function rightTree(id) {
 
 
 
-async function start() {
+async function start(id) {
     console.log("connected")
-    await startStep("one", "news-scrapping");
+    await startStep(id, "news-scrapping");
     await new Promise((resolve, reject) => {
         setTimeout(() => {
             resolve(200);
         }, 2000);
     });
-    await completeStep("one", "news-scrapping");
+    await completeStep(id, "news-scrapping");
 
 
 
@@ -511,55 +526,55 @@ async function start() {
 
     await Promise.all(
         [new Promise(async (resolve, reject) => {
-            startStep("one", "bbc-scraper");
+            startStep(id, "bbc-scraper");
             try {
                 const resp = await fetch("https://news-scrapper-three.vercel.app/data/bbc");
                 const jsonBbc = await resp.json();
                 console.log(jsonBbc)
                 news = [...news, ...jsonBbc];
                 resolve(jsonBbc)
-                completeStep("one", "bbc-scraper", true, JSON.stringify(jsonBbc, null, 2));
+                completeStep(id, "bbc-scraper", true, JSON.stringify(jsonBbc, null, 2));
             } catch (error) {
                 reject(error);
-                errorStep("one", "bbc-scraper", false, JSON.stringify(error));
+                errorStep(id, "bbc-scraper", false, JSON.stringify(error));
             }
 
         }),
         new Promise(async (resolve, reject) => {
-            startStep("one", "ndtv-scraper");
+            startStep(id, "ndtv-scraper");
             try {
                 const resp = await fetch("https://news-scrapper-three.vercel.app/data/ndtv");
                 const jsonNdtv = await resp.json();
                 console.log(jsonNdtv)
                 news = [...news, ...jsonNdtv];
                 resolve(jsonNdtv)
-                completeStep("one", "ndtv-scraper", true, JSON.stringify(jsonNdtv, null, 2));
+                completeStep(id, "ndtv-scraper", true, JSON.stringify(jsonNdtv, null, 2));
             } catch (error) {
                 reject(error);
-                errorStep("one", "ndtv-scraper", false, JSON.stringify(error));
+                errorStep(id, "ndtv-scraper", false, JSON.stringify(error));
 
             }
 
         }),
         new Promise(async (resolve, reject) => {
-            startStep("one", "thehindu-scraper");
+            startStep(id, "thehindu-scraper");
             try {
                 const resp = await fetch("https://news-scrapper-three.vercel.app/data/the_hindu");
                 const jsonTheHindu = await resp.json();
                 console.log(jsonTheHindu)
                 news = [...news, ...jsonTheHindu];
                 resolve(jsonTheHindu)
-                completeStep("one", "thehindu-scraper", true, JSON.stringify(jsonTheHindu, null, 2));
+                completeStep(id, "thehindu-scraper", true, JSON.stringify(jsonTheHindu, null, 2));
             } catch (error) {
                 reject(error);
-                errorStep("one", "thehindu-scraper", false, JSON.stringify(error));
+                errorStep(id, "thehindu-scraper", false, JSON.stringify(error));
 
             }
 
         })]
     )
 
-    await startStep("one", "news-aggregation")
+    await startStep(id, "news-aggregation")
 
     await new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -567,12 +582,12 @@ async function start() {
         }, 1000);
     })
 
-    await completeStep("one", "news-aggregation");
+    await completeStep(id, "news-aggregation");
     // precedence-engine
 
 
 
-    await startStep("one", "precedence-engine");
+    await startStep(id, "precedence-engine");
 
 
     const news_with_pred = await calcNewsPredecence(news);
@@ -583,23 +598,23 @@ async function start() {
         }, 1500);
     })
 
-    await completeStep("one", "precedence-engine", true, JSON.stringify(news_with_pred, null, 2));
+    await completeStep(id, "precedence-engine", true, JSON.stringify(news_with_pred, null, 2));
 
 
     // 
 
-    await startStep("one", "vector-segregation");
+    await startStep(id, "vector-segregation");
 
-    await addNewsToDb(news_with_pred);
+    // await addNewsToDb(news_with_pred);
     await new Promise((resolve, reject) => {
         setTimeout(() => {
             resolve(200);
         }, 1500);
     })
 
-    await completeStep("one", "vector-segregation")
+    await completeStep(id, "vector-segregation")
 
-    await Promise.all([leftTree("one", news_with_pred), rightTree("one", news_with_pred)]);
+    await Promise.all([leftTree(id, news_with_pred), rightTree(id, news_with_pred)]);
 
 
 
@@ -615,13 +630,52 @@ app.get("/start", (req, res) => {
     start();
     res.send("started");
 })
-
-app.get("/", (req, res) => {
-    res.send("hello world")
+app.post("/start", express.text(), (req, res) => {
+    console.log(req.body);
+    const id = JSON.parse(req.body)?.id;
+    if (id == undefined) {
+        return res.send("no id present");
+    }
+    console.log(id);
+    setTimeout(async () => {
+        console.log("starting");
+        start(id);
+    }, 2000);
 })
+app.post("/save", express.text(), async (req, res) => {
+    try {
+        console.log(req.body);
+
+        const { tab, logs } = JSON.parse(req.body);
+
+        if (!tab?.id) {
+            return res.status(400).send("no tab id present");
+        }
+
+        console.log("saving tab:", tab.id);
+
+        await uploadWorkflow(tab, logs || []);
+
+        res.send("tab saved successfully");
+
+    } catch (err) {
+        console.error("error saving tab:", err);
+        res.status(500).send("error saving tab");
+    }
+});
+
+
+// app.get("/", (req, res) => {
+//     res.send("hello world")
+// })
 
 app.get("/one", (req, res) => {
     res.send("Hello World one")
+})
+
+app.get("/workflows",async (req,res)=>{
+    const workflows = await getAllWorkflows();
+    res.json(workflows);
 })
 
 io.on("connection", async (socket) => {
@@ -642,14 +696,12 @@ io.on("connection", async (socket) => {
 
 
 
-
 // setInterval(() => {
 //     io.emit("foo");
 // }, 500);
 
 // app.get("/", (req, res) => {
 //     res.send(`
-
 //         `)
 // })
 

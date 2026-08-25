@@ -15,18 +15,52 @@ import useTabs from './hooks/Tabs';
 
 function App() {
 
-  const { tabs, createTab, activeTab, updateActiveTab, startState, completeState, errorState } = useTabs();
-  const { state, logs } = useSocket(startState, completeState, errorState);
+  const { tabsRef, tabs, createTab, activeTab, updateActiveTab, startState, completeState, errorState } = useTabs();
+  const { state, logs } = useSocket(startState, (id, state) => {
+    completeState(id, state);
+    console.log("complete state is as follows ----");
+    console.log(state);
+    try {
+      if (state == "social-complete") {
+
+
+        console.log("debugging--------------------------------");
+
+        console.log("tabsref is s");
+        console.log(tabsRef.current);
+        console.log(id);
+        console.log(tabsRef.current[id]);
+        const data = JSON.parse(JSON.stringify(tabsRef.current[id]));
+        console.log("data is ");
+        console.log(data);
+        if (data == undefined) {
+          console.error("error in setting the data");
+          return;
+        }
+        data.map.find(edge => (edge.id == state)).status = "completed";
+        fetch("/save", {
+          method: "POST",
+          body: JSON.stringify({
+            tab: data,
+            logs: logs
+          })
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }, errorState);
 
 
   useEffect(() => {
     createTab();
   }, []);
 
-  useEffect(()=>{
+  useEffect(() => {
     console.log("tabs changes");
     console.log(tabs)
-  },[tabs]);
+  }, [tabs]);
+
 
 
 
@@ -98,7 +132,7 @@ function App() {
               fontSize: "12px"
             }}
           >
-            {/* {tabs.find((t) => t.id === activeTab)?.name} */}
+            {activeTab?.name}
           </div>
         </div>
 
@@ -127,30 +161,33 @@ function App() {
               gap: '10px',
             }}
           >
-            {/* {tabs.map((tab) => (
+            {/* {tabs} */}
+            {/* {JSON.stringify(tabs)} */}
+            {/* {tabs && tabs.map(val=>val.id)} */}
+
+            {Object.values(tabs).map((tab) => (
               <div
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => updateActiveTab(tab.id)}
                 style={{
                   padding: '10px',
-                  // borderRadius: '12px',
                   cursor: 'pointer',
                   transition: '0.2s',
                   background:
-                    activeTab === tab.id
+                    activeTab?.id === tab.id
                       ? '#94a3b8'
                       : '#f8fafc',
                   color:
-                    activeTab === tab.id
+                    activeTab?.id === tab.id
                       ? '#ffffff'
                       : '#334155',
                   fontWeight: '500',
-                  fontSize: "12px"
+                  fontSize: '12px',
                 }}
               >
-                {tab.name}
+                {tab.name || `Workflow ${tab.id}`}
               </div>
-            ))} */}
+            ))}
           </div>
         </div>
 
@@ -224,17 +261,65 @@ function App() {
                 </div>
               )
             )}
+
+            <button
+              title="Start workflow"
+              onClick={() => {
+                const id = createTab();
+                fetch("/start", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    id: id
+                  })
+                })
+              }}
+              style={{
+                height: '32px',
+                padding: '0 14px',
+                marginLeft: '8px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                background: '#111827',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '7px',
+                fontSize: '12px',
+                fontWeight: '600',
+                letterSpacing: '0.1px',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#1f2937';
+                e.currentTarget.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#111827';
+                e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.08)';
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: '#22c55e',
+                }}
+              />
+              Start
+            </button>
+
+          </div>
+
+          <div>
+            {activeTab?.id}
           </div>
 
           {/* User */}
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              background: '#111827',
-            }}
-          />
+
         </div>
 
         {/* TABS */}

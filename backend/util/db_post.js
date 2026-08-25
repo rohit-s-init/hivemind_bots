@@ -2,10 +2,10 @@ export default async function addPosts(posts) {
     try {
         // create the connection to database
         const connection = await mysql.createConnection({
-            host: 'gateway01.us-east-1.prod.aws.tidbcloud.com',
-            user: '2ALCrVvP4zHSppn.root',
-            password: "0l4sBaxeqVPIRV52",
-            database: "hivemind",
+            host: process.env.host,
+            user: process.env.user,
+            password: process.env.password,
+            database: process.env.database,
             ssl: {
                 minVersion: "TLSv1.2",
                 rejectUnauthorized: true
