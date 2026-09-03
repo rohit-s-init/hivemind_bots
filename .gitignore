@@ -34,3 +34,6 @@ Thumbs.db
 .yarn/
 
 *.pem
+
+# Watchdog runtime state
+.watchdog-idle-since
