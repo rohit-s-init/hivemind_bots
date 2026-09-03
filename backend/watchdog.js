@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = path.join(__dirname, ".watchdog-idle-since");
 
 const APP_PORT = process.env.PORT || 8080;
-const IDLE_THRESHOLD_MINUTES = Number(process.env.WATCHDOG_IDLE_MINUTES || 1);
+const IDLE_THRESHOLD_MINUTES = Number(process.env.WATCHDOG_IDLE_MINUTES || 3);
 const STOP_URL = process.env.EC2_MANAGER_STOP_URL || "https://hivemindbotec2manager.vercel.app/ec2/stop";
 
 function countActiveConnections() {
